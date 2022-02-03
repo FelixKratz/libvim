@@ -673,10 +673,10 @@ void vimInit(int argc, char **argv)
   params.want_full_screen = TRUE;
   params.window_count = -1;
 
-  // We expect the consumer to handle key-bindings and mappings,
-  // so disable mappings:
-  no_mapping++;
-  no_zero_mapping++;
+  // // We expect the consumer to handle key-bindings and mappings,
+  // // so disable mappings:
+  // no_mapping++;
+  // no_zero_mapping++;
 
   mch_early_init();
   common_init(&params);
