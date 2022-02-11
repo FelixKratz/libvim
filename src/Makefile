@@ -1649,7 +1649,18 @@ PRO_MANUAL = os_amiga.pro os_win32.pro \
 	os_mswin.pro winclip.pro os_beos.pro $(PERL_PRO)
 
 # Default target is making the executable and tools
-all: $(VIMTARGET) $(TOOLS) languages $(GUI_BUNDLE)
+all:
+	$(MAKE) clean
+	$(MAKE) distclean
+	./configure
+	$(MAKE) libvim_x86.a
+	$(MAKE) clean
+	$(MAKE) distclean
+	./configure
+	$(MAKE) libvim_arm64.a
+
+	lipo -create -output libvim.a libvim_x86.a libvim_arm64.a
+
 
 tools: $(TOOLS)
 
@@ -1749,9 +1760,34 @@ $(VIMTARGET): auto/config.mk objects $(OBJ) version.c version.h
 		MAKE="$(MAKE)" LINK_AS_NEEDED=$(LINK_AS_NEEDED) \
 		sh $(srcdir)/link.sh
 
-libvim.a: $(OBJ) libvim.c
+DEFINES = -DHAVE_CONFIG_H -DMACOS_X -DMACOS_X_DARWIN
+LIBS = -lm -lncurses -liconv -framework Carbon -framework Cocoa 
+WARN_FLAGS = -Wall -Wno-array-bounds \
+	     -Wno-unknown-warning-option \
+	     -Wno-cpp -Wno-pointer-sign \
+	     -Wno-unused-parameter \
+	     -Wno-strict-overflow \
+	     -Wno-return-type -Werror
+
+CFLAGS = $(WARN_FLAGS) $(DEFINES) -g -Iproto -std=c99 -O2
+
+CCC_NF = clang -c -I. -target arm64-apple-macos12.0
+CCC = $(CCC_NF) -c -I. $(CFLAGS)
+
+
+libvim_x86.a: CFLAGS = $(WARN_FLAGS) $(DEFINES) -g -Iproto -std=c99 -O2
+libvim_x86.a: CCC_NF = clang -c -I. -target x86_64-apple-macos11.0 
+libvim_x86.a: CCC = $(CCC_NF) $(CFLAGS)
+libvim_x86.a: $(OBJ) libvim.c
 	$(CCC) version.c -o objects/version.o
-	$(AR) rcs libvim.a $(OBJ)
+	$(AR) rcs libvim_x86.a $(OBJ)
+
+libvim_arm64.a: CFLAGS = $(WARN_FLAGS) $(DEFINES) -g -Iproto -std=c99 -O2
+libvim_arm64.a: CCC_NF = clang -c -I. -target arm64-apple-macos12.0 
+libvim_arm64.a: CCC = $(CCC_NF) $(CFLAGS)
+libvim_arm64.a: $(OBJ) libvim.c
+	$(CCC) version.c -o objects/version.o
+	$(AR) rcs libvim_arm64.a $(OBJ)
 
 xxd/xxd$(EXEEXT): xxd/xxd.c
 	cd xxd; CC="$(CC)" CFLAGS="$(CPPFLAGS) $(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
